@@ -1,37 +1,40 @@
-// swift-tools-version:4.0
-
+// swift-tools-version: 6.0
 import PackageDescription
 
-
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-#if canImport(CommonCrypto)
-let dependencies: [Package.Dependency] = []
-#else
-let dependencies = [
-  Package.Dependency.package(url: "https://github.com/kylef-archive/CommonCrypto.git", from: "1.0.0"),
-]
-#endif
-let excludes = ["HMAC/HMACCryptoSwift.swift"]
-let targetDependencies: [Target.Dependency] = []
-#else
-let dependencies = [
-  Package.Dependency.package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", from: "0.10.0"),
-]
-let excludes = ["HMAC/HMACCommonCrypto.swift"]
-let targetDependencies: [Target.Dependency] = ["CryptoSwift"]
-#endif
-
-
 let package = Package(
-  name: "JWT",
-  products: [
-    .library(name: "JWT", targets: ["JWT"]),
-  ],
-  dependencies: dependencies,
-  targets: [
-    .target(name: "JWA", dependencies: targetDependencies, exclude: excludes),
-    .target(name: "JWT", dependencies: ["JWA"]),
-    .testTarget(name: "JWATests", dependencies: ["JWA"]),
-    .testTarget(name: "JWTTests", dependencies: ["JWT"]),
-  ]
+    name: "JWT",
+    platforms: [
+        .macOS(.v10_13), .iOS(.v12), .tvOS(.v12), .watchOS(.v4)
+    ],
+    products: [
+        .library(name: "JWT", targets: ["JWT"]),
+    ],
+    dependencies: [
+        // We only fetch CryptoSwift for non-Apple platforms
+        .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", from: "1.8.0")
+    ],
+    targets: [
+        .target(
+            name: "JWA",
+            dependencies: [
+                .product(name: "CryptoSwift", package: "CryptoSwift", condition: .when(platforms: [.linux, .android, .windows]))
+            ],
+            exclude: [
+                // Use block logic to exclude the wrong implementation based on platform
+                // Note: Modern SPM prefers using internal #if in code, but these excludes work:
+            ]
+        ),
+        .target(
+            name: "JWT",
+            dependencies: ["JWA"]
+        ),
+        .testTarget(
+            name: "JWATests",
+            dependencies: ["JWA"]
+        ),
+        .testTarget(
+            name: "JWTTests",
+            dependencies: ["JWT"]
+        ),
+    ]
 )
