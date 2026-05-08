@@ -1,28 +1,35 @@
-// swift-tools-version: 6.0
+// swift-tools-version:5.9
 import PackageDescription
+
+#if canImport(CommonCrypto)
+let dependencies: [Package.Dependency] = []
+let excludes = ["HMAC/HMACCryptoSwift.swift"]
+let targetDependencies: [Target.Dependency] = []
+#else
+let dependencies: [Package.Dependency] = [
+    .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", from: "1.8.0"),
+]
+let excludes = ["HMAC/HMACCommonCrypto.swift"]
+let targetDependencies: [Target.Dependency] = ["CryptoSwift"]
+#endif
 
 let package = Package(
     name: "JWT",
     platforms: [
-        .macOS(.v10_13), .iOS(.v12), .tvOS(.v12), .watchOS(.v4)
+        .macOS(.v13),
+        .iOS(.v16),
+        .watchOS(.v9),
+        .tvOS(.v16),
     ],
     products: [
         .library(name: "JWT", targets: ["JWT"]),
     ],
-    dependencies: [
-        // We only fetch CryptoSwift for non-Apple platforms
-        .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", from: "1.8.0")
-    ],
+    dependencies: dependencies,
     targets: [
         .target(
             name: "JWA",
-            dependencies: [
-                .product(name: "CryptoSwift", package: "CryptoSwift", condition: .when(platforms: [.linux, .android, .windows]))
-            ],
-            exclude: [
-                // Use block logic to exclude the wrong implementation based on platform
-                // Note: Modern SPM prefers using internal #if in code, but these excludes work:
-            ]
+            dependencies: targetDependencies,
+            exclude: excludes
         ),
         .target(
             name: "JWT",
@@ -36,5 +43,6 @@ let package = Package(
             name: "JWTTests",
             dependencies: ["JWT"]
         ),
-    ]
+    ],
+    swiftLanguageVersions: [.v5]
 )
